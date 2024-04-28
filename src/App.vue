@@ -5,10 +5,16 @@ import { getFirestore, collection, addDoc } from 'firebase/firestore'
 import MusicPattern from './components/MusicPattern.vue'
 
 interface PatternData {
-  id: string;
+  type: string;
   audio: string;
   video1: string;
   video2: string;
+}
+
+interface PatternRuntimeData {
+  key: string;
+  data: PatternData
+  playing: boolean
 }
 
 interface RecordingData {
@@ -35,99 +41,98 @@ const db = getFirestore(app)
 
 const keyToPattern: { [key: string]: PatternData } = {
   q: {
-    id: 'line',
+    type: 'line',
     audio: 'https://assets.codepen.io/10916095/piano_Am.mp3',
     video1: 'https://assets.codepen.io/10916095/line_1.webm',
-
     video2: 'https://assets.codepen.io/10916095/line_2.webm'
   },
   w: {
-    id: 'line',
+    type: 'line',
     audio: 'https://assets.codepen.io/10916095/Piano_A.mp3',
     video1: 'https://assets.codepen.io/10916095/Line+1.1.webm',
     video2: 'https://assets.codepen.io/10916095/Line+2.1.webm'
   },
   e: {
-    id: 'line',
+    type: 'line',
     audio: 'https://assets.codepen.io/10916095/piano_F.mp3',
     video1: 'https://assets.codepen.io/10916095/Line+1.2.webm',
     video2: 'https://assets.codepen.io/10916095/Line+2.2.webm'
   },
   r: {
-    id: 'line',
+    type: 'line',
     audio: 'https://assets.codepen.io/10916095/G.mp3',
     video1: 'https://assets.codepen.io/10916095/Line+1.3.webm',
     video2: 'https://assets.codepen.io/10916095/Line+2.3.webm'
   },
   t: {
-    id: 'line',
+    type: 'line',
     audio: 'https://assets.codepen.io/10916095/Fm.mp3',
     video1: 'https://assets.codepen.io/10916095/Line+1.4.webm',
     video2: 'https://assets.codepen.io/10916095/Line+2.4.webm'
   },
   a: {
-    id: 'block',
+    type: 'block',
     audio: 'https://assets.codepen.io/10916095/Guitar_Am.mp3',
     video1: 'https://assets.codepen.io/10916095/block_1.webm',
     video2: 'https://assets.codepen.io/10916095/block_2.webm'
   },
   s: {
-    id: 'block',
+    type: 'block',
     audio: 'https://assets.codepen.io/10916095/D_1.mp3',
     video1: 'https://assets.codepen.io/10916095/Block+1.1_1.webm',
     video2: 'https://assets.codepen.io/10916095/Block+2.1_1.webm'
   },
   d: {
-    id: 'block',
+    type: 'block',
     audio: 'https://assets.codepen.io/10916095/Dm_1.mp3',
     video1: 'https://assets.codepen.io/10916095/Block+1.2_1.webm',
     video2: 'https://assets.codepen.io/10916095/Block+2.2_1.webm'
   },
   f: {
-    id: 'block',
+    type: 'block',
     audio: 'https://assets.codepen.io/10916095/E_1.mp3',
     video1: 'https://assets.codepen.io/10916095/Block+1.3_1.webm',
     video2: 'https://assets.codepen.io/10916095/Block+2.3_1.webm'
   },
   g: {
-    id: 'block',
+    type: 'block',
     audio: 'https://assets.codepen.io/10916095/Em_1.mp3',
     video1: 'https://assets.codepen.io/10916095/Block+1.4_1.webm',
     video2: 'https://assets.codepen.io/10916095/Block+2.4_1.webm'
   },
   z: {
-    id: 'wave',
+    type: 'wave',
     audio: 'https://assets.codepen.io/10916095/Harp_Am.mp3',
     video1: 'https://assets.codepen.io/10916095/water_wave_1.webm',
     video2: 'https://assets.codepen.io/10916095/water_wave_2.webm'
   },
   x: {
-    id: 'wave',
+    type: 'wave',
     audio: 'https://assets.codepen.io/10916095/harp_C.mp3',
     video1: 'https://assets.codepen.io/10916095/Water+wave+1.1.webm',
     video2: 'https://assets.codepen.io/10916095/Water+wave+2.1.webm'
   },
   c: {
-    id: 'wave',
+    type: 'wave',
     audio: 'https://assets.codepen.io/10916095/D_2.mp3',
     video1: 'https://assets.codepen.io/10916095/Water+wave+1.2.webm',
     video2: 'https://assets.codepen.io/10916095/Water+wave+2.2.webm'
   },
   v: {
-    id: 'wave',
+    type: 'wave',
     audio: 'https://assets.codepen.io/10916095/F_1.mp3',
     video1: 'https://assets.codepen.io/10916095/Water+wave+1.3.webm',
     video2: 'https://assets.codepen.io/10916095/Water+wave+2.3.webm'
   },
   b: {
-    id: 'wave',
+    type: 'wave',
     audio: 'https://assets.codepen.io/10916095/Em_2.mp3',
     video1: 'https://assets.codepen.io/10916095/Water+wave+1.4.webm',
     video2: 'https://assets.codepen.io/10916095/Water+wave+2.4.webm'
   }
 }
 
-const patternAnimations = reactive<PatternData[]>([])
+const patternAnimations = reactive<PatternRuntimeData[]>([])
 const position = reactive<{ x: number, y: number }>({
   x: 200,
   y: 200
@@ -141,7 +146,11 @@ const recordingNameInputRef = ref<HTMLInputElement | null>(null)
 const inputFocused = ref(false)
 
 function press(event: KeyboardEvent) {
+  // Ignore repeat keys and typing into input
   if (event.repeat || inputFocused.value) {
+    return
+  }
+  if (!(event.key in keyToPattern)) {
     return
   }
 
@@ -150,7 +159,7 @@ function press(event: KeyboardEvent) {
   if (!patternData) {
     return
   }
-  patternAnimations.push(patternData)
+  patternAnimations.push({ data: patternData, key: event.key, playing: true })
 
   // Record keypress
   if (recording.value) {
@@ -165,8 +174,21 @@ function press(event: KeyboardEvent) {
 }
 
 function release(event: KeyboardEvent) {
-  let indexToDelete = patternAnimations.indexOf(keyToPattern[event.key])
-  patternAnimations.splice(indexToDelete, 1)
+  // Ignore repeat keys and typing into input
+  if (event.repeat || inputFocused.value) {
+    return
+  }
+  if (!(event.key in keyToPattern)) {
+    return
+  }
+
+  let indexToStop = patternAnimations.findLastIndex((value) => {
+    return value.key === event.key
+  })
+  if (indexToStop < 0) {
+    return
+  }
+  patternAnimations[indexToStop].playing = false;
   if (recording.value) {
     recordedMusic.value.push({
       key: event.key,
@@ -224,9 +246,9 @@ async function uploadRecording() {
       <img src="https://assets.codepen.io/10916095/description-01_1.png" alt="descriptionImg" />
       <button @click="description = false">Click to Start</button>
     </div>
-    <MusicPattern v-show="!description" v-for="pattern in patternAnimations" :video1="pattern.video1"
-      :video2="pattern.video2" :audio="pattern.audio" :id="pattern.id" :x="position.x" :y="position.y"
-      :key="pattern.id"></MusicPattern>
+    <MusicPattern v-show="!description" v-for="(pattern, index) in patternAnimations" :video1="pattern.data.video1"
+      :video2="pattern.data.video2" :audio="pattern.data.audio" :type="pattern.data.type" :x="position.x"
+      :y="position.y" :key="index" :playing="pattern.playing"></MusicPattern>
   </div>
   <div class="recording_control" v-show="!description">
     <input placeholder="Please name your recording" v-show="enterRecordingName" ref="recordingNameInputRef"

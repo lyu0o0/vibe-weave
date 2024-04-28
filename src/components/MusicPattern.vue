@@ -1,22 +1,23 @@
 <script setup lang="ts">
-import { ref, onMounted, defineProps } from 'vue'
+import { ref, onMounted, defineProps, watch } from 'vue'
 
 const props = defineProps<{
   video1: string
   video2: string
   audio: string
-  id: string
+  type: string
   x: number
   y: number
+  playing: boolean
 }>()
 
-const patternIdToTranslateX: { [patternId: string]: string } = {
+const patternTypeToTranslateX: { [patternId: string]: string } = {
   line: '0',
   block: '-50%',
   wave: '-50%'
 }
 
-const patternIdToTranslateY: { [patternId: string]: string } = {
+const patternTypeToTranslateY: { [patternId: string]: string } = {
   line: '-50%',
   block: '-50%',
   wave: '-50%'
@@ -57,14 +58,14 @@ onMounted(() => {
       'px) translateY(' +
       localY +
       'px) translateX(' +
-      patternIdToTranslateX[id] +
+      patternTypeToTranslateX[type] +
       ') translateY(' +
-      patternIdToTranslateY[id] +
+      patternTypeToTranslateY[type] +
       ')'
-  }" :class="{ line: id === 'line', musicPattern: id !== 'line' }">
+  }" :class="{ line: type === 'line', musicPattern: type !== 'line' }">
     <video v-show="intro" :src="video1" @ended="introEnded" ref="video1Ref"></video>
     <video v-show="!intro" :src="video2" ref="video2Ref" loop></video>
-    <audio :src="audio" ref="audioRef" loop></audio>
+    <audio :src="audio" ref="audioRef" loop v-if="props.playing"></audio>
   </div>
 </template>
 
