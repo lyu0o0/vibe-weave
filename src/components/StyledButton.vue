@@ -1,11 +1,11 @@
 <script setup lang="ts">
-const props = withDefaults(defineProps<{ style?: 'light' | 'dark' }>(), {
-  style: 'light'
+const props = withDefaults(defineProps<{ color?: 'light' | 'dark' }>(), {
+  color: 'light'
 })
 </script>
 
 <template>
-  <button :class="props.style" @click="$emit('click')">
+  <button :class="props.color">
     <slot />
   </button>
 </template>

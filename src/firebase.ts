@@ -4,13 +4,13 @@ import { getAuth } from 'firebase/auth'
 
 // Initialize Firebase
 const firebaseConfig = {
-  apiKey: 'AIzaSyC6spFl1fxjADY-Ii4JTFoRUSmRGWRXBuY',
-  authDomain: 'vibeweave.firebaseapp.com',
-  projectId: 'vibeweave',
-  storageBucket: 'vibeweave.appspot.com',
-  messagingSenderId: '1088254463059',
-  appId: '1:1088254463059:web:8ba14e6bd566432ad08aa6',
-  measurementId: 'G-8YY2E4QD1D'
+  apiKey: 'AIzaSyDybZE01cY3NhHDCXpvFK3ArKxMWd7tmt0',
+  authDomain: 'vibeweave-3d57c.firebaseapp.com',
+  projectId: 'vibeweave-3d57c',
+
+  storageBucket: 'vibeweave-3d57c.appspot.com',
+  messagingSenderId: '104651636212',
+  appId: '1:104651636212:web:45f274db5fe50744c70da1'
 }
 
 const app = initializeApp(firebaseConfig)

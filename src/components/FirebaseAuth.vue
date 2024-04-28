@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { IconUser, IconAsterisk, IconMail } from '@tabler/icons-vue'
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc, getDoc } from "firebase/firestore"
+import { doc, setDoc, getDoc } from 'firebase/firestore'
 
 import StyledButton from './StyledButton.vue'
 import { auth, db } from '../firebase'
@@ -26,8 +26,20 @@ function toSignup() {
 function login() {
   signInWithEmailAndPassword(auth, email.value, password.value)
     .then(async () => {
-      const snapshot = await getDoc(doc(db, "users", auth.currentUser.uid))
-      emit('logged-in', snapshot.data().name)
+      errorMessage.value = ''
+      if (auth.currentUser == null) {
+        throw {
+          code: 'unknown-error'
+        }
+      }
+      const snapshot = await getDoc(doc(db, 'users', auth.currentUser.uid))
+      const data = snapshot.data()
+      if (data == undefined) {
+        throw {
+          code: 'unknown-error'
+        }
+      }
+      emit('logged-in', data.name)
     })
     .catch((error) => {
       switch (error.code) {
@@ -47,13 +59,20 @@ function signup() {
   createUserWithEmailAndPassword(auth, email.value, password.value)
     .then(async () => {
       // Store user's name
-      await setDoc(doc(db, "users", auth.currentUser.uid), {
-        "name": name.value
+      errorMessage.value = ''
+      if (auth.currentUser == null) {
+        throw {
+          code: 'unknown-error'
+        }
+      }
+      await setDoc(doc(db, 'users', auth.currentUser.uid), {
+        name: name.value,
+        liked: []
       })
-
       emit('logged-in', name.value)
     })
     .catch((error) => {
+      console.log(error)
       switch (error.code) {
         case 'auth/invalid-email':
           errorMessage.value = 'Email is invalid'
@@ -75,27 +94,15 @@ function signup() {
   <div class="auth">
     <div class="input" v-if="!isLogin">
       <IconUser size="24" />
-      <input
-        placeholder="Name"
-        v-model="name"
-        type="text"
-      />
+      <input placeholder="Name" v-model="name" type="text" />
     </div>
     <div class="input">
       <IconMail size="24" />
-      <input
-        placeholder="Email"
-        v-model="email"
-        type="email"
-      />
+      <input placeholder="Email" v-model="email" type="email" />
     </div>
     <div class="input">
       <IconAsterisk size="24" />
-      <input
-        placeholder="Password"
-        v-model="password"
-        type="password"
-      />
+      <input placeholder="Password" v-model="password" type="password" />
     </div>
     <div class="error" v-if="errorMessage">{{ errorMessage }}</div>
     <StyledButton v-if="isLogin" @click="login">Login</StyledButton>

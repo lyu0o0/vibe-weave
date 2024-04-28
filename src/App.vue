@@ -1,9 +1,23 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
-import { collection, addDoc, getDocs, where, query } from 'firebase/firestore'
+import {
+  collection,
+  addDoc,
+  getDocs,
+  where,
+  query,
+  orderBy,
+  limit,
+  doc,
+  getDoc
+} from 'firebase/firestore'
 import { db, auth } from './firebase'
 import MusicPattern from './components/MusicPattern.vue'
 import FirebaseAuth from './components/FirebaseAuth.vue'
+import RecordingList, {
+  type RecordingData,
+  type KeyPressData
+} from './components/RecordingList.vue'
 
 interface PatternData {
   type: string
@@ -16,14 +30,8 @@ interface PatternRuntimeData {
   key: string
   data: PatternData
   playing: boolean
-}
-
-interface RecordingData {
-  key: string
-  time: number
   x: number
   y: number
-  pressed: boolean
 }
 
 const keyToPattern: { [key: string]: PatternData } = {
@@ -124,15 +132,35 @@ const position = reactive<{ x: number; y: number }>({
   x: 200,
   y: 200
 })
-const username = ref("")
+const username = ref('')
 const isOnLanding = ref(true)
 const recording = ref(false)
-const enterRecordingName = ref(false)
 const recordingStartTime = ref(Date.now())
-const recordedMusic = ref<RecordingData[]>([])
-const recordingNameInputRef = ref<HTMLInputElement | null>(null)
+const recordedMusic = ref<KeyPressData[]>([])
 const inputFocused = ref(false)
-const myRecordings = ref([])
+const myRecordings = ref<RecordingData[]>([])
+const globalRecordings = ref<RecordingData[]>([])
+const myLikes = ref<string[]>([])
+const currentlyPlaying = ref<string>('')
+const playingTimeouts = ref<number[]>([])
+
+function playSoundForKey(key: string, x: number, y: number) {
+  const patternData = keyToPattern[key]
+  if (!patternData) {
+    return
+  }
+  patternAnimations.push({ data: patternData, key: key, playing: true, x, y })
+}
+
+function stopSoundForKey(key: string) {
+  let indexToStop = patternAnimations.findLastIndex((value) => {
+    return value.key === key
+  })
+  if (indexToStop < 0) {
+    return
+  }
+  patternAnimations[indexToStop].playing = false
+}
 
 function press(event: KeyboardEvent) {
   // Ignore keys when: they are repeated keys, typing into input, or when on landing
@@ -143,12 +171,7 @@ function press(event: KeyboardEvent) {
     return
   }
 
-  const patternData = keyToPattern[event.key]
-
-  if (!patternData) {
-    return
-  }
-  patternAnimations.push({ data: patternData, key: event.key, playing: true })
+  playSoundForKey(event.key, position.x, position.y)
 
   // Record keypress
   if (recording.value) {
@@ -171,13 +194,8 @@ function release(event: KeyboardEvent) {
     return
   }
 
-  let indexToStop = patternAnimations.findLastIndex((value) => {
-    return value.key === event.key
-  })
-  if (indexToStop < 0) {
-    return
-  }
-  patternAnimations[indexToStop].playing = false
+  stopSoundForKey(event.key)
+
   if (recording.value) {
     recordedMusic.value.push({
       key: event.key,
@@ -194,10 +212,12 @@ onMounted(() => {
   window.addEventListener('keyup', release)
 })
 
-function onLoggedIn(name) {
+function onLoggedIn(name: string) {
   isOnLanding.value = false
   username.value = name
   getMyRecordings()
+  getGlobalRecordings()
+  getMyLikes()
 }
 
 function changePosition(event: MouseEvent) {
@@ -210,41 +230,114 @@ function startRecording() {
   recordingStartTime.value = Date.now()
 }
 
-async function stopRecording() {
+async function uploadRecording(name: string) {
   recording.value = false
-  enterRecordingName.value = true
-}
-
-async function uploadRecording() {
   if (!auth.currentUser) {
-    console.error("User is not logged in")
+    console.error('User is not logged in')
     return
   }
-  if (!recordingNameInputRef.value) {
-    console.error('recordingNameInputRef is not bound')
-    return
-  }
-  await addDoc(collection(db, 'recordings'), {
-    name: recordingNameInputRef.value.value,
+  const newRecording = {
+    name,
     keys: recordedMusic.value,
     author: auth.currentUser.uid,
-    authorName: username.value
-  })
+    authorName: username.value,
+    likes: 0
+  }
+  const docRef = await addDoc(collection(db, 'recordings'), newRecording)
+  myRecordings.value.push({ ...newRecording, id: docRef.id })
   recordedMusic.value = []
-  enterRecordingName.value = false
 }
 
 async function getMyRecordings() {
   if (!auth.currentUser) {
-    console.error("User is not logged in")
+    console.error('User is not logged in')
     return
   }
-  const q = query(collection(db, "recordings"), where("author", "==", auth.currentUser.uid))
+  const q = query(collection(db, 'recordings'), where('author', '==', auth.currentUser.uid))
   const snapshot = await getDocs(q)
-  const recordings = []
+  const recordings: RecordingData[] = []
   snapshot.forEach((doc) => {
-    recordings.push(doc.data())
+    recordings.push({ ...(doc.data() as RecordingData), id: doc.id })
   })
+  myRecordings.value = recordings
+}
+
+async function getGlobalRecordings() {
+  if (!auth.currentUser) {
+    console.error('User is not logged in')
+    return
+  }
+  const q = query(
+    collection(db, 'recordings'),
+    where('author', '!=', auth.currentUser.uid),
+    orderBy('likes', 'desc'),
+    limit(10)
+  )
+  const snapshot = await getDocs(q)
+  const recordings: RecordingData[] = []
+  snapshot.forEach((doc) => {
+    recordings.push({ ...(doc.data() as RecordingData), id: doc.id })
+  })
+  globalRecordings.value = recordings
+}
+
+async function getMyLikes() {
+  if (!auth.currentUser) {
+    console.error('User is not logged in')
+    return
+  }
+  const snapshot = await getDoc(doc(db, 'users', auth.currentUser.uid))
+  const data = snapshot.data()
+  if (data === undefined) {
+    console.error('User database is corrupted')
+    return
+  }
+  myLikes.value = data.liked
+}
+
+function like(docId: string) {
+  myLikes.value.push(docId)
+  const recordingIndex = globalRecordings.value.findIndex(
+    (recording: RecordingData) => recording.id === docId
+  )
+  globalRecordings.value[recordingIndex].likes += 1
+}
+
+function unlike(docId: string) {
+  myLikes.value.splice(myLikes.value.indexOf(docId), 1)
+  const recordingIndex = globalRecordings.value.findIndex(
+    (recording: RecordingData) => recording.id === docId
+  )
+  globalRecordings.value[recordingIndex].likes -= 1
+}
+
+function play(docId: string) {
+  currentlyPlaying.value = docId
+  const recordingToPlay = globalRecordings.value.find(
+    (recording: RecordingData) => recording.id === docId
+  )
+  if (!recordingToPlay) return
+  const timeouts: number[] = []
+  for (const key of recordingToPlay.keys) {
+    timeouts.push(
+      setTimeout(() => {
+        if (key.pressed) {
+          playSoundForKey(key.key, key.x, key.y)
+        } else {
+          stopSoundForKey(key.key)
+        }
+      }, key.time)
+    )
+  }
+  playingTimeouts.value = timeouts
+}
+
+function stop() {
+  currentlyPlaying.value = ''
+  for (const timeout of playingTimeouts.value) {
+    clearTimeout(timeout)
+  }
+  patternAnimations.splice(0, patternAnimations.length)
 }
 </script>
 
@@ -260,19 +353,35 @@ async function getMyRecordings() {
       <img src="https://assets.codepen.io/10916095/description-01_1.png" alt="descriptionImg" />
     </div>
     <FirebaseAuth v-if="isOnLanding" @logged-in="onLoggedIn" />
-    <MusicPattern v-show="!isOnLanding" v-for="(pattern, index) in patternAnimations" :video1="pattern.data.video1"
-      :video2="pattern.data.video2" :audio="pattern.data.audio" :type="pattern.data.type" :x="position.x"
-      :y="position.y" :key="index" :playing="pattern.playing"></MusicPattern>
+    <MusicPattern
+      v-show="!isOnLanding"
+      v-for="(pattern, index) in patternAnimations"
+      :video1="pattern.data.video1"
+      :video2="pattern.data.video2"
+      :audio="pattern.data.audio"
+      :type="pattern.data.type"
+      :x="pattern.x"
+      :y="pattern.y"
+      :key="index"
+      :playing="pattern.playing"
+    ></MusicPattern>
   </div>
-  <div class="recording_control" v-show="!isOnLanding">
-    <input placeholder="Please name your recording" v-show="enterRecordingName" ref="recordingNameInputRef"
-      @focusin="inputFocused = true" @focusout="inputFocused = false" />
-    <button v-show="!recording && !enterRecordingName" @click="startRecording">
-      Start Recording
-    </button>
-    <button v-show="recording" @click="stopRecording">Stop Recording</button>
-    <button v-show="enterRecordingName" @click="uploadRecording">Upload Recording</button>
-  </div>
+  <RecordingList
+    v-if="!isOnLanding"
+    :myRecordings="myRecordings"
+    :globalRecordings="globalRecordings"
+    :recording="recording"
+    :myLikes="myLikes"
+    :currentlyPlaying="currentlyPlaying"
+    @start-recording="startRecording"
+    @upload-recording="uploadRecording"
+    @input-focusin="inputFocused = true"
+    @input-focusout="inputFocused = false"
+    @like="like"
+    @unlike="unlike"
+    @play="play"
+    @stop="stop"
+  />
 </template>
 
 <style scoped>
@@ -295,7 +404,7 @@ async function getMyRecordings() {
   width: 70%;
 }
 
-.line>video {
+.line > video {
   width: 100%;
 }
 
@@ -309,11 +418,11 @@ async function getMyRecordings() {
   justify-content: center;
 }
 
-.description>img {
+.description > img {
   width: 65%;
 }
 
-.description>p {
+.description > p {
   font-size: 1.5rem;
   color: var(--dark);
   width: 50%;
@@ -321,7 +430,7 @@ async function getMyRecordings() {
   margin-bottom: -35px;
 }
 
-.description>video {
+.description > video {
   width: 35%;
   margin-bottom: 60px;
 }
