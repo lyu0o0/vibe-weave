@@ -124,6 +124,7 @@ const position = reactive<{ x: number; y: number }>({
   x: 200,
   y: 200
 })
+const username = ref("")
 const isOnLanding = ref(true)
 const recording = ref(false)
 const enterRecordingName = ref(false)
@@ -193,8 +194,9 @@ onMounted(() => {
   window.addEventListener('keyup', release)
 })
 
-function onLoggedIn() {
+function onLoggedIn(name) {
   isOnLanding.value = false
+  username.value = name
   getMyRecordings()
 }
 
@@ -225,7 +227,8 @@ async function uploadRecording() {
   await addDoc(collection(db, 'recordings'), {
     name: recordingNameInputRef.value.value,
     keys: recordedMusic.value,
-    author: auth.currentUser.uid
+    author: auth.currentUser.uid,
+    authorName: username.value
   })
   recordedMusic.value = []
   enterRecordingName.value = false

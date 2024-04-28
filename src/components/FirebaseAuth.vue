@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { IconUser, IconAsterisk, IconMail } from '@tabler/icons-vue'
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc } from "firebase/firestore"
+import { doc, setDoc, getDoc } from "firebase/firestore"
 
 import StyledButton from './StyledButton.vue'
 import { auth, db } from '../firebase'
@@ -25,8 +25,9 @@ function toSignup() {
 
 function login() {
   signInWithEmailAndPassword(auth, email.value, password.value)
-    .then(() => {
-      emit('logged-in')
+    .then(async () => {
+      const snapshot = await getDoc(doc(db, "users", auth.currentUser.uid))
+      emit('logged-in', snapshot.data().name)
     })
     .catch((error) => {
       switch (error.code) {
@@ -50,7 +51,7 @@ function signup() {
         "name": name.value
       })
 
-      emit('logged-in')
+      emit('logged-in', name.value)
     })
     .catch((error) => {
       switch (error.code) {
