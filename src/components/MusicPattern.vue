@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, defineProps, watch } from 'vue'
+import { ref, onMounted, defineProps } from 'vue'
 
 const props = defineProps<{
   video1: string
@@ -33,7 +33,7 @@ const audioRef = ref<HTMLAudioElement | null>(null)
 
 function introEnded() {
   if (!video2Ref.value) {
-    console.error("video2Ref is not bound")
+    console.error('video2Ref is not bound')
     return
   }
   intro.value = false
@@ -42,7 +42,7 @@ function introEnded() {
 
 onMounted(() => {
   if (!video1Ref.value || !audioRef.value) {
-    console.error("video1Ref or audioRef is not bound")
+    console.error('video1Ref or audioRef is not bound')
     return
   }
   video1Ref.value.play()
@@ -51,18 +51,21 @@ onMounted(() => {
 </script>
 
 <template>
-  <div :style="{
-    transform:
-      'translateX(' +
-      localX +
-      'px) translateY(' +
-      localY +
-      'px) translateX(' +
-      patternTypeToTranslateX[type] +
-      ') translateY(' +
-      patternTypeToTranslateY[type] +
-      ')'
-  }" :class="{ line: type === 'line', musicPattern: type !== 'line' }">
+  <div
+    :style="{
+      transform:
+        'translateX(' +
+        localX +
+        'px) translateY(' +
+        localY +
+        'px) translateX(' +
+        patternTypeToTranslateX[type] +
+        ') translateY(' +
+        patternTypeToTranslateY[type] +
+        ')'
+    }"
+    :class="{ line: type === 'line', musicPattern: type !== 'line' }"
+  >
     <video v-show="intro" :src="video1" @ended="introEnded" ref="video1Ref"></video>
     <video v-show="!intro" :src="video2" ref="video2Ref" loop></video>
     <audio :src="audio" ref="audioRef" loop v-if="props.playing"></audio>
@@ -75,7 +78,7 @@ onMounted(() => {
   width: 50%;
 }
 
-.musicPattern>video {
+.musicPattern > video {
   width: 100%;
 }
 </style>

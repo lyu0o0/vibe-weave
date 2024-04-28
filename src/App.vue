@@ -1,43 +1,31 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
-import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, addDoc } from 'firebase/firestore'
+import { collection, addDoc } from 'firebase/firestore'
+import { db } from './firebase'
 import MusicPattern from './components/MusicPattern.vue'
+import StyledButton from './components/StyledButton.vue'
+import FirebaseAuth from './components/FirebaseAuth.vue'
 
 interface PatternData {
-  type: string;
-  audio: string;
-  video1: string;
-  video2: string;
+  type: string
+  audio: string
+  video1: string
+  video2: string
 }
 
 interface PatternRuntimeData {
-  key: string;
+  key: string
   data: PatternData
   playing: boolean
 }
 
 interface RecordingData {
-  key: string;
-  time: number;
-  x: number;
-  y: number;
-  pressed: boolean;
+  key: string
+  time: number
+  x: number
+  y: number
+  pressed: boolean
 }
-
-// Initialize Firebase
-const firebaseConfig = {
-  apiKey: 'AIzaSyC6spFl1fxjADY-Ii4JTFoRUSmRGWRXBuY',
-  authDomain: 'vibeweave.firebaseapp.com',
-  projectId: 'vibeweave',
-  storageBucket: 'vibeweave.appspot.com',
-  messagingSenderId: '1088254463059',
-  appId: '1:1088254463059:web:8ba14e6bd566432ad08aa6',
-  measurementId: 'G-8YY2E4QD1D'
-}
-
-const app = initializeApp(firebaseConfig)
-const db = getFirestore(app)
 
 const keyToPattern: { [key: string]: PatternData } = {
   q: {
@@ -133,7 +121,7 @@ const keyToPattern: { [key: string]: PatternData } = {
 }
 
 const patternAnimations = reactive<PatternRuntimeData[]>([])
-const position = reactive<{ x: number, y: number }>({
+const position = reactive<{ x: number; y: number }>({
   x: 200,
   y: 200
 })
@@ -188,7 +176,7 @@ function release(event: KeyboardEvent) {
   if (indexToStop < 0) {
     return
   }
-  patternAnimations[indexToStop].playing = false;
+  patternAnimations[indexToStop].playing = false
   if (recording.value) {
     recordedMusic.value.push({
       key: event.key,
@@ -222,7 +210,7 @@ async function stopRecording() {
 
 async function uploadRecording() {
   if (!recordingNameInputRef.value) {
-    console.error("recordingNameInputRef is not bound")
+    console.error('recordingNameInputRef is not bound')
     return
   }
   await addDoc(collection(db, 'recordings'), {
@@ -246,13 +234,28 @@ async function uploadRecording() {
       <img src="https://assets.codepen.io/10916095/description-01_1.png" alt="descriptionImg" />
       <button @click="description = false">Click to Start</button>
     </div>
-    <MusicPattern v-show="!description" v-for="(pattern, index) in patternAnimations" :video1="pattern.data.video1"
-      :video2="pattern.data.video2" :audio="pattern.data.audio" :type="pattern.data.type" :x="position.x"
-      :y="position.y" :key="index" :playing="pattern.playing"></MusicPattern>
+    <FirebaseAuth @focusin="inputFocused = true" @focusout="inputFocused = false" />
+    <MusicPattern
+      v-show="!description"
+      v-for="(pattern, index) in patternAnimations"
+      :video1="pattern.data.video1"
+      :video2="pattern.data.video2"
+      :audio="pattern.data.audio"
+      :type="pattern.data.type"
+      :x="position.x"
+      :y="position.y"
+      :key="index"
+      :playing="pattern.playing"
+    ></MusicPattern>
   </div>
   <div class="recording_control" v-show="!description">
-    <input placeholder="Please name your recording" v-show="enterRecordingName" ref="recordingNameInputRef"
-      @focus="inputFocused = true" @focusout="inputFocused = false" />
+    <input
+      placeholder="Please name your recording"
+      v-show="enterRecordingName"
+      ref="recordingNameInputRef"
+      @focusin="inputFocused = true"
+      @focusout="inputFocused = false"
+    />
     <button v-show="!recording && !enterRecordingName" @click="startRecording">
       Start Recording
     </button>
@@ -263,10 +266,11 @@ async function uploadRecording() {
 
 <style scoped>
 .canvas {
-  background-color: #2b0d29;
+  background-color: var(--dark);
   width: 100%;
   height: 100%;
   overflow: hidden;
+  display: flex;
 }
 
 .recording_control {
@@ -280,13 +284,13 @@ async function uploadRecording() {
   width: 70%;
 }
 
-.line>video {
+.line > video {
   width: 100%;
 }
 
 .description {
-  background-color: #ffefe4;
-  width: 100%;
+  background-color: var(--light);
+  width: 70%;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -294,45 +298,20 @@ async function uploadRecording() {
   justify-content: center;
 }
 
-.description>img {
+.description > img {
   width: 65%;
 }
 
-.description>p {
+.description > p {
   font-size: 1.5rem;
-  color: #2b0d29;
+  color: var(--dark);
   width: 50%;
   text-align: center;
   margin-bottom: -35px;
 }
 
-.description>video {
+.description > video {
   width: 35%;
   margin-bottom: 60px;
-}
-
-button {
-  margin-bottom: 10px;
-  margin-top: 40px;
-  background-color: #ffefe4;
-  border-radius: 9999px;
-  border: 5;
-  border-color: #eb2ea4;
-  padding: 0.5rem 3rem;
-  color: #2b0d29;
-  cursor: pointer;
-}
-
-input {
-  border-radius: 9999px;
-  margin-bottom: 10px;
-  margin-top: 40px;
-  background-color: #ffefe4;
-  border-radius: 9999px;
-  border: 5;
-  border-color: #eb2ea4;
-  padding: 0.5rem 3rem;
-  color: #2b0d29;
-  margin: 0 2rem;
 }
 </style>

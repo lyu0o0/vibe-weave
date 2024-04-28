@@ -9,3 +9,8 @@ body {
   height: 100vh;
   overflow: hidden;
 }
+
+:root {
+  --dark: #2b0d29;
+  --light: #ffefe4;
+}
