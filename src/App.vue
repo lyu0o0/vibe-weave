@@ -4,6 +4,21 @@ import { initializeApp } from 'firebase/app'
 import { getFirestore, collection, addDoc } from 'firebase/firestore'
 import MusicPattern from './components/MusicPattern.vue'
 
+interface PatternData {
+  id: string;
+  audio: string;
+  video1: string;
+  video2: string;
+}
+
+interface RecordingData {
+  key: string;
+  time: number;
+  x: number;
+  y: number;
+  pressed: boolean;
+}
+
 // Initialize Firebase
 const firebaseConfig = {
   apiKey: 'AIzaSyC6spFl1fxjADY-Ii4JTFoRUSmRGWRXBuY',
@@ -18,7 +33,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 const db = getFirestore(app)
 
-const keyToPattern = {
+const keyToPattern: { [key: string]: PatternData } = {
   q: {
     id: 'line',
     audio: 'https://assets.codepen.io/10916095/piano_Am.mp3',
@@ -100,23 +115,20 @@ const keyToPattern = {
   },
   v: {
     id: 'wave',
-
     audio: 'https://assets.codepen.io/10916095/F_1.mp3',
     video1: 'https://assets.codepen.io/10916095/Water+wave+1.3.webm',
-
     video2: 'https://assets.codepen.io/10916095/Water+wave+2.3.webm'
   },
   b: {
     id: 'wave',
     audio: 'https://assets.codepen.io/10916095/Em_2.mp3',
-
     video1: 'https://assets.codepen.io/10916095/Water+wave+1.4.webm',
     video2: 'https://assets.codepen.io/10916095/Water+wave+2.4.webm'
   }
 }
 
-const patternAnimations = reactive([])
-const position = reactive({
+const patternAnimations = reactive<PatternData[]>([])
+const position = reactive<{ x: number, y: number }>({
   x: 200,
   y: 200
 })
@@ -124,7 +136,7 @@ const description = ref(true)
 const recording = ref(false)
 const enterRecordingName = ref(false)
 const recordingStartTime = ref(Date.now())
-const recordedMusic = ref([])
+const recordedMusic = ref<RecordingData[]>([])
 const recordingNameInputRef = ref(null)
 const inputFocused = ref(false)
 
@@ -146,7 +158,22 @@ function press(event) {
       key: event.key,
       time: Date.now() - recordingStartTime.value,
       x: position.x,
-      y: position.y
+      y: position.y,
+      pressed: true
+    })
+  }
+}
+
+function release(event) {
+  let indexToDelete = patternAnimations.indexOf(keyToPattern[event.key])
+  patternAnimations.splice(indexToDelete, 1)
+  if (recording.value) {
+    recordedMusic.value.push({
+      key: event.key,
+      time: Date.now() - recordingStartTime.value,
+      x: 0,
+      y: 0,
+      pressed: false
     })
   }
 }
@@ -159,11 +186,6 @@ onMounted(() => {
 function changePosition(event) {
   position.x = event.clientX
   position.y = event.clientY
-}
-
-function release(event) {
-  let indexToDelete = patternAnimations.indexOf(keyToPattern[event.key])
-  patternAnimations.splice(indexToDelete, 1)
 }
 
 function startRecording() {
@@ -198,26 +220,13 @@ async function uploadRecording() {
       <img src="https://assets.codepen.io/10916095/description-01_1.png" alt="descriptionImg" />
       <button @click="description = false">Click to Start</button>
     </div>
-    <MusicPattern
-      v-show="!description"
-      v-for="pattern in patternAnimations"
-      :video1="pattern.video1"
-      :video2="pattern.video2"
-      :audio="pattern.audio"
-      :id="pattern.id"
-      :x="position.x"
-      :y="position.y"
-      :key="pattern.id"
-    ></MusicPattern>
+    <MusicPattern v-show="!description" v-for="pattern in patternAnimations" :video1="pattern.video1"
+      :video2="pattern.video2" :audio="pattern.audio" :id="pattern.id" :x="position.x" :y="position.y"
+      :key="pattern.id"></MusicPattern>
   </div>
   <div class="recording_control" v-show="!description">
-    <input
-      placeholder="Please name your recording"
-      v-show="enterRecordingName"
-      ref="recordingNameInputRef"
-      @focus="inputFocused = true"
-      @focusout="inputFocused = false"
-    />
+    <input placeholder="Please name your recording" v-show="enterRecordingName" ref="recordingNameInputRef"
+      @focus="inputFocused = true" @focusout="inputFocused = false" />
     <button v-show="!recording && !enterRecordingName" @click="startRecording">
       Start Recording
     </button>
@@ -245,7 +254,7 @@ async function uploadRecording() {
   width: 70%;
 }
 
-.line > video {
+.line>video {
   width: 100%;
 }
 
@@ -259,11 +268,11 @@ async function uploadRecording() {
   justify-content: center;
 }
 
-.description > img {
+.description>img {
   width: 65%;
 }
 
-.description > p {
+.description>p {
   font-size: 1.5rem;
   color: #2b0d29;
   width: 50%;
@@ -271,7 +280,7 @@ async function uploadRecording() {
   margin-bottom: -35px;
 }
 
-.description > video {
+.description>video {
   width: 35%;
   margin-bottom: 60px;
 }
