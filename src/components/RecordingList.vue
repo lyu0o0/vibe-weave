@@ -120,6 +120,15 @@ async function unlike(docId: string) {
             <IconHeartFilled size="18" />
             {{ recording.likes }}
           </div>
+          <div>
+            <IconPlayerPlay
+              size="18"
+              class="cursor-pointer"
+              v-if="currentlyPlaying !== recording.id"
+              @click="$emit('play', recording.id)"
+            />
+            <IconPlayerStop size="18" class="cursor-pointer" v-else @click="$emit('stop')" />
+          </div>
         </template>
       </div>
     </div>
@@ -180,7 +189,7 @@ async function unlike(docId: string) {
 }
 
 .grid.my-list {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .grid > div:not(.header) {

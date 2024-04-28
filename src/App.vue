@@ -313,9 +313,12 @@ function unlike(docId: string) {
 
 function play(docId: string) {
   currentlyPlaying.value = docId
-  const recordingToPlay = globalRecordings.value.find(
+  let recordingToPlay = globalRecordings.value.find(
     (recording: RecordingData) => recording.id === docId
   )
+  if (!recordingToPlay) {
+    recordingToPlay = myRecordings.value.find((recording: RecordingData) => recording.id === docId)
+  }
   if (!recordingToPlay) return
   const timeouts: number[] = []
   for (const key of recordingToPlay.keys) {
