@@ -137,10 +137,10 @@ const recording = ref(false)
 const enterRecordingName = ref(false)
 const recordingStartTime = ref(Date.now())
 const recordedMusic = ref<RecordingData[]>([])
-const recordingNameInputRef = ref(null)
+const recordingNameInputRef = ref<HTMLInputElement | null>(null)
 const inputFocused = ref(false)
 
-function press(event) {
+function press(event: KeyboardEvent) {
   if (event.repeat || inputFocused.value) {
     return
   }
@@ -164,7 +164,7 @@ function press(event) {
   }
 }
 
-function release(event) {
+function release(event: KeyboardEvent) {
   let indexToDelete = patternAnimations.indexOf(keyToPattern[event.key])
   patternAnimations.splice(indexToDelete, 1)
   if (recording.value) {
@@ -183,7 +183,7 @@ onMounted(() => {
   window.addEventListener('keyup', release)
 })
 
-function changePosition(event) {
+function changePosition(event: MouseEvent) {
   position.x = event.clientX
   position.y = event.clientY
 }
@@ -199,6 +199,10 @@ async function stopRecording() {
 }
 
 async function uploadRecording() {
+  if (!recordingNameInputRef.value) {
+    console.error("recordingNameInputRef is not bound")
+    return
+  }
   await addDoc(collection(db, 'recordings'), {
     name: recordingNameInputRef.value.value,
     keys: recordedMusic.value
