@@ -267,12 +267,7 @@ async function getGlobalRecordings() {
     console.error('User is not logged in')
     return
   }
-  const q = query(
-    collection(db, 'recordings'),
-    where('author', '!=', auth.currentUser.uid),
-    orderBy('likes', 'desc'),
-    limit(10)
-  )
+  const q = query(collection(db, 'recordings'), orderBy('likes', 'desc'), limit(10))
   const snapshot = await getDocs(q)
   const recordings: RecordingData[] = []
   snapshot.forEach((doc) => {
