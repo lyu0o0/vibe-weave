@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
-import { collection, addDoc } from 'firebase/firestore'
-import { db } from './firebase'
+import { collection, addDoc, getDocs, where, query } from 'firebase/firestore'
+import { db, auth } from './firebase'
 import MusicPattern from './components/MusicPattern.vue'
-import StyledButton from './components/StyledButton.vue'
 import FirebaseAuth from './components/FirebaseAuth.vue'
 
 interface PatternData {
@@ -125,17 +124,18 @@ const position = reactive<{ x: number; y: number }>({
   x: 200,
   y: 200
 })
-const description = ref(true)
+const isOnLanding = ref(true)
 const recording = ref(false)
 const enterRecordingName = ref(false)
 const recordingStartTime = ref(Date.now())
 const recordedMusic = ref<RecordingData[]>([])
 const recordingNameInputRef = ref<HTMLInputElement | null>(null)
 const inputFocused = ref(false)
+const myRecordings = ref([])
 
 function press(event: KeyboardEvent) {
-  // Ignore repeat keys and typing into input
-  if (event.repeat || inputFocused.value) {
+  // Ignore keys when: they are repeated keys, typing into input, or when on landing
+  if (event.repeat || inputFocused.value || isOnLanding.value) {
     return
   }
   if (!(event.key in keyToPattern)) {
@@ -162,8 +162,8 @@ function press(event: KeyboardEvent) {
 }
 
 function release(event: KeyboardEvent) {
-  // Ignore repeat keys and typing into input
-  if (event.repeat || inputFocused.value) {
+  // Ignore keys when: they are repeated keys, typing into input, or when on landing
+  if (event.repeat || inputFocused.value || isOnLanding.value) {
     return
   }
   if (!(event.key in keyToPattern)) {
@@ -193,6 +193,11 @@ onMounted(() => {
   window.addEventListener('keyup', release)
 })
 
+function onLoggedIn() {
+  isOnLanding.value = false
+  getMyRecordings()
+}
+
 function changePosition(event: MouseEvent) {
   position.x = event.clientX
   position.y = event.clientY
@@ -209,22 +214,40 @@ async function stopRecording() {
 }
 
 async function uploadRecording() {
+  if (!auth.currentUser) {
+    console.error("User is not logged in")
+    return
+  }
   if (!recordingNameInputRef.value) {
     console.error('recordingNameInputRef is not bound')
     return
   }
   await addDoc(collection(db, 'recordings'), {
     name: recordingNameInputRef.value.value,
-    keys: recordedMusic.value
+    keys: recordedMusic.value,
+    author: auth.currentUser.uid
   })
   recordedMusic.value = []
   enterRecordingName.value = false
+}
+
+async function getMyRecordings() {
+  if (!auth.currentUser) {
+    console.error("User is not logged in")
+    return
+  }
+  const q = query(collection(db, "recordings"), where("author", "==", auth.currentUser.uid))
+  const snapshot = await getDocs(q)
+  const recordings = []
+  snapshot.forEach((doc) => {
+    recordings.push(doc.data())
+  })
 }
 </script>
 
 <template>
   <div class="canvas" @click="changePosition">
-    <div class="description" v-show="description">
+    <div class="description" v-if="isOnLanding">
       <p>
         Welcome to Harmonic Patterns! Where your creativity brings art and music together in one
         harmonious canvas.
@@ -232,30 +255,15 @@ async function uploadRecording() {
       <video src="https://assets.codepen.io/10916095/line_2.webm" loop muted autoplay></video>
 
       <img src="https://assets.codepen.io/10916095/description-01_1.png" alt="descriptionImg" />
-      <button @click="description = false">Click to Start</button>
     </div>
-    <FirebaseAuth @focusin="inputFocused = true" @focusout="inputFocused = false" />
-    <MusicPattern
-      v-show="!description"
-      v-for="(pattern, index) in patternAnimations"
-      :video1="pattern.data.video1"
-      :video2="pattern.data.video2"
-      :audio="pattern.data.audio"
-      :type="pattern.data.type"
-      :x="position.x"
-      :y="position.y"
-      :key="index"
-      :playing="pattern.playing"
-    ></MusicPattern>
+    <FirebaseAuth v-if="isOnLanding" @logged-in="onLoggedIn" />
+    <MusicPattern v-show="!isOnLanding" v-for="(pattern, index) in patternAnimations" :video1="pattern.data.video1"
+      :video2="pattern.data.video2" :audio="pattern.data.audio" :type="pattern.data.type" :x="position.x"
+      :y="position.y" :key="index" :playing="pattern.playing"></MusicPattern>
   </div>
-  <div class="recording_control" v-show="!description">
-    <input
-      placeholder="Please name your recording"
-      v-show="enterRecordingName"
-      ref="recordingNameInputRef"
-      @focusin="inputFocused = true"
-      @focusout="inputFocused = false"
-    />
+  <div class="recording_control" v-show="!isOnLanding">
+    <input placeholder="Please name your recording" v-show="enterRecordingName" ref="recordingNameInputRef"
+      @focusin="inputFocused = true" @focusout="inputFocused = false" />
     <button v-show="!recording && !enterRecordingName" @click="startRecording">
       Start Recording
     </button>
@@ -284,7 +292,7 @@ async function uploadRecording() {
   width: 70%;
 }
 
-.line > video {
+.line>video {
   width: 100%;
 }
 
@@ -298,11 +306,11 @@ async function uploadRecording() {
   justify-content: center;
 }
 
-.description > img {
+.description>img {
   width: 65%;
 }
 
-.description > p {
+.description>p {
   font-size: 1.5rem;
   color: var(--dark);
   width: 50%;
@@ -310,7 +318,7 @@ async function uploadRecording() {
   margin-bottom: -35px;
 }
 
-.description > video {
+.description>video {
   width: 35%;
   margin-bottom: 60px;
 }

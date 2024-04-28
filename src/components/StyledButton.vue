@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const props = withDefaults(defineProps<{ style: 'light' | 'dark' }>(), {
+const props = withDefaults(defineProps<{ style?: 'light' | 'dark' }>(), {
   style: 'light'
 })
 </script>
