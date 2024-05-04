@@ -14,6 +14,7 @@ import {
 import { db, auth } from './firebase'
 import MusicPattern from './components/MusicPattern.vue'
 import FirebaseAuth from './components/FirebaseAuth.vue'
+import StyledButton from './components/StyledButton.vue'
 import RecordingList, {
   type RecordingData,
   type KeyPressData
@@ -330,12 +331,16 @@ function play(docId: string) {
   playingTimeouts.value = timeouts
 }
 
+function clearCanvas() {
+  patternAnimations.splice(0, patternAnimations.length)
+}
+
 function stop() {
   currentlyPlaying.value = ''
   for (const timeout of playingTimeouts.value) {
     clearTimeout(timeout)
   }
-  patternAnimations.splice(0, patternAnimations.length)
+  clearCanvas()
 }
 </script>
 
@@ -343,11 +348,10 @@ function stop() {
   <div class="canvas" @click="changePosition">
     <div class="description" v-if="isOnLanding">
       <p>
-        Welcome to VibeWeave! Where your creativity brings art and music together in one
-        harmonious canvas.
+        Welcome to VibeWeave! Where your creativity brings art and music together in one harmonious
+        canvas.
       </p>
       <video src="https://assets.codepen.io/10916095/line_2.webm" loop muted autoplay></video>
-
       <img src="https://assets.codepen.io/10916095/description-01_1.png" alt="descriptionImg" />
     </div>
     <FirebaseAuth v-if="isOnLanding" @logged-in="onLoggedIn" />
@@ -380,6 +384,7 @@ function stop() {
     @play="play"
     @stop="stop"
   />
+  <StyledButton class="clear-screen-button" @click="clearCanvas" v-if="!isOnLanding">Clear Canvas</StyledButton>
 </template>
 
 <style scoped>
@@ -431,5 +436,11 @@ function stop() {
 .description > video {
   width: 35%;
   margin-bottom: 60px;
+}
+
+.clear-screen-button {
+  position: absolute;
+  right: 2rem;
+  bottom: 2rem;
 }
 </style>
