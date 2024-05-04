@@ -4,6 +4,7 @@ import {
   collection,
   addDoc,
   getDocs,
+  deleteDoc,
   where,
   query,
   orderBy,
@@ -342,6 +343,17 @@ function stop() {
   }
   clearCanvas()
 }
+
+async function deleteMusic(docId: string) {
+  if (currentlyPlaying.value === docId) {
+    stop()
+  }
+  const indexToDelete = myRecordings.value.findIndex(
+    (recording: RecordingData) => recording.id === docId
+  )
+  myRecordings.value.splice(indexToDelete, 1)
+  await deleteDoc(doc(db, 'recordings', docId))
+}
 </script>
 
 <template>
@@ -383,8 +395,11 @@ function stop() {
     @unlike="unlike"
     @play="play"
     @stop="stop"
+    @delete="deleteMusic"
   />
-  <StyledButton class="clear-screen-button" @click="clearCanvas" v-if="!isOnLanding">Clear Canvas</StyledButton>
+  <StyledButton class="clear-screen-button" @click="clearCanvas" v-if="!isOnLanding"
+    >Clear Canvas</StyledButton
+  >
 </template>
 
 <style scoped>

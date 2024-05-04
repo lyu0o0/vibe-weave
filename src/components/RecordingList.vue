@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { IconHeart, IconHeartFilled, IconPlayerPlay, IconPlayerStop } from '@tabler/icons-vue'
+import {
+  IconHeart,
+  IconHeartFilled,
+  IconPlayerPlay,
+  IconPlayerStop,
+  IconTrash
+} from '@tabler/icons-vue'
 import { doc, updateDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore'
 import StyledButton from './StyledButton.vue'
 import { db, auth } from '../firebase'
@@ -29,7 +35,8 @@ const emit = defineEmits([
   'like',
   'unlike',
   'play',
-  'stop'
+  'stop',
+  'delete'
 ])
 
 const props = defineProps<{
@@ -131,6 +138,9 @@ async function unlike(docId: string) {
             />
             <IconPlayerStop size="18" class="cursor-pointer" v-else @click="$emit('stop')" />
           </div>
+          <div>
+            <IconTrash size="18" class="cursor-pointer" @click="$emit('delete', recording.id)" />
+          </div>
         </template>
       </div>
     </div>
@@ -190,10 +200,6 @@ async function unlike(docId: string) {
   margin-top: 1rem;
   row-gap: 0.5rem;
   align-content: start;
-}
-
-.grid.my-list {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .grid > div:not(.header) {
