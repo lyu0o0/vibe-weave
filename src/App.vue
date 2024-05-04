@@ -343,7 +343,7 @@ function stop() {
   <div class="canvas" @click="changePosition">
     <div class="description" v-if="isOnLanding">
       <p>
-        Welcome to Harmonic Patterns! Where your creativity brings art and music together in one
+        Welcome to VibeWeave! Where your creativity brings art and music together in one
         harmonious canvas.
       </p>
       <video src="https://assets.codepen.io/10916095/line_2.webm" loop muted autoplay></video>
