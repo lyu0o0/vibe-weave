@@ -86,6 +86,8 @@ async function unlike(docId: string) {
         <div class="header">Artist</div>
         <div class="header">Likes</div>
         <div class="header">Play</div>
+      </div>
+      <div class="grid scroll">
         <template v-for="(recording, index) in props.globalRecordings" :key="index">
           <div>{{ recording.name }}</div>
           <div>{{ recording.authorName }}</div>
@@ -113,7 +115,7 @@ async function unlike(docId: string) {
     </div>
     <div class="my-section">
       <div class="title">My Music</div>
-      <div class="grid my-list">
+      <div class="grid my-list scroll">
         <template v-for="(recording, index) in props.myRecordings" :key="index">
           <div>{{ recording.name }}</div>
           <div class="likes">
@@ -170,6 +172,7 @@ async function unlike(docId: string) {
   font-size: 2rem;
   font-weight: 600;
   text-align: center;
+  display: fixed;
 }
 
 .header {
@@ -186,6 +189,7 @@ async function unlike(docId: string) {
   justify-items: center;
   margin-top: 1rem;
   row-gap: 0.5rem;
+  align-content: start;
 }
 
 .grid.my-list {
@@ -202,7 +206,16 @@ async function unlike(docId: string) {
 .global-section,
 .my-section {
   border: var(--dark) solid 1px;
-  padding: 1rem;
+  padding: 1rem 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.scroll {
+  overflow-y: scroll;
+  flex-shrink: 1;
+  flex-grow: 1;
+  padding: 0 1rem;
 }
 
 .global-section {
